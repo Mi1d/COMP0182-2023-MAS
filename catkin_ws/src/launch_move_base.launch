@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <!-- Add necessary parameters, maps, and configurations here -->
+  </node>
+</launch>
+
