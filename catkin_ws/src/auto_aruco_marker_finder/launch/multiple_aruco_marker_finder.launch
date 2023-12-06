@@ -37,4 +37,30 @@
     <arg name="markerId" value="327"/>
     </include>
 </group>
+
+
+<group ns="id500">
+    <include file="$(find auto_aruco_marker_finder)/launch/aruco_marker_finder.launch">
+    <arg name="markerId" value="500"/>
+    </include>
+</group>
+    
+<group ns="id501">
+    <include file="$(find auto_aruco_marker_finder)/launch/aruco_marker_finder.launch">
+    <arg name="markerId" value="501"/>
+    </include>
+</group>
+
+<group ns="id502">
+    <include file="$(find auto_aruco_marker_finder)/launch/aruco_marker_finder.launch">
+    <arg name="markerId" value="502"/>
+    </include>
+</group>
+
+<group ns="id503">
+    <include file="$(find auto_aruco_marker_finder)/launch/aruco_marker_finder.launch">
+    <arg name="markerId" value="503"/>
+    </include>
+</group>
+
 </launch>

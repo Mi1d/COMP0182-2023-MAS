@@ -9,21 +9,8 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from geometry_msgs.msg import PoseStamped
 import yaml
-import numpy as np
-import cv2
 
 rospy.init_node('goal_pose')
-def convert_sim_to_real_poses(points, matrix):
-    real_poses = []
-    for point in points:
-        sim_point = np.array([point[0], point[1], 1])
-        transformed_point = np.dot(matrix, sim_point)
-        transformed_point = transformed_point / transformed_point[2]
-        real_pose = [transformed_point[0], transformed_point[1]]
-        real_poses.append(real_pose)
-    print(real_poses)
-    return real_poses
-
 
 def check_goal_reached(init_pose, goal_coor, bias):
     if (init_pose.pose.position.x > goal_coor[0] - bias and init_pose.pose.position.x < goal_coor[0] + bias
@@ -32,16 +19,17 @@ def check_goal_reached(init_pose, goal_coor, bias):
     else:
         return False
 
-def control_agent(agent_id, coordinates):
+def control_agent(agent_id, init_pose, coordinates, scale):
     topic_name = f'agent{agent_id}/cmd_vel'
     cmd_pub = rospy.Publisher(topic_name, Twist, queue_size=10)
+    init_x = init_pose.pose.position.x
+    init_y = init_pose.pose.position.y
 
     twist = Twist()
-    init_pose = rospy.wait_for_message(f'/id{agent_id}/aruco_single/pose', PoseStamped)
 
     for coordinate in coordinates:
-        goal_x = coordinate[0]
-        goal_y = coordinate[1]
+        goal_x = coordinate[0] * scale + init_x
+        goal_y = coordinate[1] * -scale + init_y
 
         while not check_goal_reached(init_pose, [goal_x, goal_y], 0.02):
             init_pose = rospy.wait_for_message(f'/id{agent_id}/aruco_single/pose', PoseStamped)
@@ -73,33 +61,12 @@ def control_agent(agent_id, coordinates):
 
             print(f"Agent {agent_id}: theta:", theta)
 
-            k2 = 4
-            linear = 1.5
+            k2 = 5
+            linear = 2
             angular = k2 * theta
             twist.linear.x = linear * distance * math.cos(theta)
             twist.angular.z = -angular
             cmd_pub.publish(twist)
-            
-### Define your points in the simulation plane and the real-world plane
-# """
-pose_tl = rospy.wait_for_message('/id500/aruco_single/pose', PoseStamped)
-pose_tr = rospy.wait_for_message('/id501/aruco_single/pose', PoseStamped)
-pose_br = rospy.wait_for_message('/id502/aruco_single/pose', PoseStamped)
-pose_bl = rospy.wait_for_message('/id503/aruco_single/pose', PoseStamped)
-print(f'tl x={pose_tl.pose.position.x} y={pose_tl.pose.position.y}')
-print(f'tr x={pose_tr.pose.position.x} y={pose_tr.pose.position.y}')
-print(f'br x={pose_br.pose.position.x} y={pose_br.pose.position.y}')
-print(f'bl x={pose_bl.pose.position.x} y={pose_bl.pose.position.y}')
-
-real_points = np.float32([[pose_bl.pose.position.x, pose_bl.pose.position.y],
-                         [pose_br.pose.position.x, pose_br.pose.position.y],
-                         [pose_tl.pose.position.x, pose_tl.pose.position.y],
-                         [pose_tr.pose.position.x, pose_tr.pose.position.y]])
-sim_points = np.float32([[0, 0], [10, 0], [0, 10], [10, 10]])
-
-### Calculate the perspective transformation matrix
-matrix = cv2.getPerspectiveTransform(sim_points, real_points)
-# """
 
 # Read the YAML data from the file for agent 1 (schedule 1)
 with open("/home/zeyu/catkin_ws/src/auto_navigation/scripts/cbs_output.yaml", "r") as yaml_file:
@@ -115,9 +82,7 @@ coordinates_1 = []
 for item in agent_1_schedule:
     x = item["x"]
     y = item["y"]
-    coordinates_1.append([x, y])
-    
-print(coordinates_1)
+    coordinates_1.append([x - 8, y - 9])  # Subtract 8 from x and 9 from y
 
 # Read the YAML data from the file for agent 2 (schedule 2)
 # Replace the file path with the correct one for agent 2
@@ -134,13 +99,19 @@ coordinates_2 = []
 for item in agent_2_schedule:
     x = item["x"]
     y = item["y"]
-    coordinates_2.append([x, y])
+    coordinates_2.append([x, y - 9])  # Subtract 8 from x and 9 from y
+
+# Define the scale for both agents (you can adjust this as needed)
+scale = 0.08
+
+init_pose_1 = rospy.wait_for_message('/id321/aruco_single/pose', PoseStamped)
+init_pose_2 = rospy.wait_for_message('/id325/aruco_single/pose', PoseStamped)
 
 threads = []
-t1 = threading.Thread(target=control_agent, args=(321, convert_sim_to_real_poses(coordinates_1, matrix)))
+t1 = threading.Thread(target=control_agent, args=(321, init_pose_1, coordinates_1, scale))
 threads.append(t1)
 t1.start()
-t2 = threading.Thread(target=control_agent, args=(325, convert_sim_to_real_poses(coordinates_2, matrix)))
+t2 = threading.Thread(target=control_agent, args=(325, init_pose_2, coordinates_2, scale))
 threads.append(t2)
 t2.start()
 for t in threads:
