@@ -1,0 +1,14 @@
+roscore
+
+ssh ubuntu@192.168.0.34
+turtlebot
+ROS_NAMESPACE=agent321 roslaunch turtlebot3_bringup turtlebot3_robot.launch multi_robot_name:="agent321" set_lidar_frame_id:="agent321/base_scan"
+
+ssh ubuntu@192.168.0.43
+turtlebot
+ROS_NAMESPACE=agent325 roslaunch turtlebot3_bringup turtlebot3_robot.launch multi_robot_name:="agent325" set_lidar_frame_id:="agent325/base_scan"
+
+roslaunch auto_aruco_marker_finder multiple_aruco_marker_finder.launch
+rosrun rqt_gui rqt_gui
+
+rosrun auto_navigation multi_cbs_ac.py
