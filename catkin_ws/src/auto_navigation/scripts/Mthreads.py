@@ -78,7 +78,7 @@ def linear_modified_sigmoid(x, k=20, x0=0.15):
     return 1 / (1 + math.exp(-k * (x - x0)))
 
 def angular_modified_sigmoid(theta, k=5):
-    return 1 / (1 + math.exp(-k * theta))
+    return 1 / (1 + math.exp(-k * theta))-0.5
 
 
 def adjust_speed(agent_id,collision_distance):
