@@ -3,6 +3,7 @@
 import rospy
 import math
 import threading
+import time
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
@@ -33,6 +34,9 @@ def check_goal_reached(init_pose, goal_coor, bias):
         return False
 
 def control_agent(agent_id, coordinates):
+    global state
+    global lock
+
     topic_name = f'agent{agent_id}/cmd_vel'
     cmd_pub = rospy.Publisher(topic_name, Twist, queue_size=10)
 
@@ -79,6 +83,17 @@ def control_agent(agent_id, coordinates):
             twist.linear.x = linear * ((distance * 10) ** (1/6)) * (((2 / math.pi) * abs(theta) - 1) ** 8)
             twist.angular.z = -angular
             cmd_pub.publish(twist)
+
+        # Block until all agents are ready
+        while (True):
+            with lock:
+                if len(set(state.values())) == 1:
+                    break
+            time.sleep(0.01)
+
+        # Toggle state
+        state[agent_id] = not state[agent_id]
+
    
 # Define agent ids
 ids = [321, 325]
@@ -138,6 +153,9 @@ for item in agent_2_schedule:
 # Delete start points
 coordinates_1.pop(0)
 coordinates_2.pop(0)
+
+state = {ids[0]: True, ids[1]: True}
+lock = threading.Lock()
 
 threads = []
 t1 = threading.Thread(target=control_agent, args=(ids[0], convert_sim_to_real_poses(coordinates_1, matrix)))
